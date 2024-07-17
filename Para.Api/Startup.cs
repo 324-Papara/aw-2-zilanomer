@@ -1,8 +1,11 @@
 using System.Text.Json.Serialization;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Para.Data.Context;
 using Para.Data.UnitOfWork;
+using Para.Data.Validators;
 
 namespace Para.Api;
 
@@ -37,6 +40,10 @@ public class Startup
 
         var connectionStringPostgre = Configuration.GetConnectionString("PostgresSqlConnection");
         services.AddDbContext<ParaPostgreDbContext>(options => options.UseNpgsql(connectionStringPostgre));
+
+        //FluentValidation
+        services.AddValidatorsFromAssemblyContaining<CustomerValidator>();
+        services.AddFluentValidation(x => x.RegisterValidatorsFromAssemblyContaining<CustomerValidator>()); // Buradaki sýnýf(CustomerValidator)ne ise bütün validate leri bulup sisteme entegre eder.
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
     }
