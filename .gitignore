@@ -1,0 +1,26 @@
+
+# Visual Studio dosyaları
+.vscode/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build çıktı dosyaları
+bin/
+obj/
+
+# Diğer
+*.log
+*.tmp
+*.bak
+*.swp
+
+# Paket yönetimi dosyaları
+node_modules/
+packages/
+
+# Çıktı klasörleri
+out/
+dist/
