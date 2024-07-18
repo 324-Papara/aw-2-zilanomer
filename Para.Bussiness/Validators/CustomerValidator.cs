@@ -1,14 +1,14 @@
 ﻿using Microsoft.EntityFrameworkCore.Diagnostics;
-using Para.Data.Domain;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FluentValidation;
+using Para.Data.Domain;
 
 
-namespace Para.Data.Validators
+namespace Para.Bussiness.Validators
 {
     public class CustomerValidator : AbstractValidator<Customer>
     {

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Para.Data.Context;
 using Para.Data.Domain;
+using Para.Data.UnitOfWork;
 
 namespace Para.Api.Controllers
 {
@@ -10,49 +11,83 @@ namespace Para.Api.Controllers
     [ApiController]
     public class CustomersController : ControllerBase
     {
-        private readonly ParaSqlDbContext dbContext;
+        private readonly IUnitOfWork unitOfWork;
 
-        public CustomersController(ParaSqlDbContext dbContext)
+        public CustomersController(IUnitOfWork unitOfWork)
         {
-            this.dbContext = dbContext;
+            this.unitOfWork = unitOfWork;
         }
 
-
+        // Tüm müþterileri ve iliþkili verileri getirir
         [HttpGet]
-        public async Task<List<Customer>> Get()
+        public async Task<ActionResult<List<Customer>>> Get()
         {
-            var entityList1 = await dbContext.Set<Customer>().Include(x=> x.CustomerAddresses).Include(x=> x.CustomerPhones).Include(x=> x.CustomerDetail).ToListAsync();
-            var entityList2 = await dbContext.Customers.Include(x=> x.CustomerAddresses).Include(x=> x.CustomerPhones).Include(x=> x.CustomerDetail).ToListAsync();
-            return entityList1;
+            var customers = await unitOfWork.CustomerRepository
+                .Include(x => x.CustomerAddresses, x => x.CustomerPhones, x => x.CustomerDetail)  //INCLUDE metodu ile iliþkili verileri çekmiþ oluyoruz.
+                .ToListAsync();
+            return Ok(customers);
         }
-
+        // Belirli bir müþteri ID'sine sahip müþteri ve iliþkili verileri getirir
         [HttpGet("{customerId}")]
-        public async Task<Customer> Get(long customerId)
+        public async Task<ActionResult<Customer>> Get(long customerId)
         {
-            var entity = await dbContext.Set<Customer>().Include(x=> x.CustomerAddresses).Include(x=> x.CustomerPhones).Include(x=> x.CustomerDetail).FirstOrDefaultAsync(x => x.Id == customerId);
-            return entity;
+            var customer = await unitOfWork.CustomerRepository
+                .Include(x => x.CustomerAddresses, x => x.CustomerPhones, x => x.CustomerDetail)
+                .FirstOrDefaultAsync(x => x.Id == customerId);
+            if (customer == null)
+                return NotFound();
+            return Ok(customer);
         }
 
+        // isimle arama yaparýz.
+        [HttpGet("search")]
+        public async Task<ActionResult<List<Customer>>> Search([FromQuery] string name)
+        {
+            var customers = await unitOfWork.CustomerRepository
+                .Where(x => x.FirstName == name || x.LastName == name);  // WHERE metodu ile dinamik eþleþen müþterileri getiririz.
+            return Ok(customers);
+        }
+
+        // yeni kayit ekleme
         [HttpPost]
-        public async Task Post([FromBody] Customer value)
+        public async Task<IActionResult> Post([FromBody] Customer value)
         {
-            var entity = await dbContext.Set<Customer>().AddAsync(value);
-            await dbContext.SaveChangesAsync();
+            if (value == null)
+                return BadRequest("Customer cannot be null");
+
+            await unitOfWork.CustomerRepository.Insert(value);
+            await unitOfWork.Complete();
+            return CreatedAtAction(nameof(Get), new { customerId = value.Id }, value);
         }
 
+        // mevcut kaydý sileriz.
         [HttpPut("{customerId}")]
-        public async Task Put(long customerId, [FromBody] Customer value)
+        public async Task<IActionResult> Put(long customerId, [FromBody] Customer value)
         {
-            dbContext.Set<Customer>().Update(value);
-            await dbContext.SaveChangesAsync();
+            if (value == null)
+                return BadRequest("Customer cannot be null");
+
+            var existingCustomer = await unitOfWork.CustomerRepository.GetById(customerId);
+            if (existingCustomer == null)
+                return NotFound();
+
+            value.Id = existingCustomer.Id; // ID'yi korur
+            await unitOfWork.CustomerRepository.Update(value);
+            await unitOfWork.Complete();
+            return NoContent();
         }
 
+        // mevcut olan kaydý sileriz.
         [HttpDelete("{customerId}")]
-        public async Task Delete(long customerId)
+        public async Task<IActionResult> Delete(long customerId)
         {
-            var entity = await dbContext.Set<Customer>().FirstOrDefaultAsync(x => x.Id == customerId);
-            dbContext.Set<Customer>().Remove(entity);
-            await dbContext.SaveChangesAsync();
+            var existingCustomer = await unitOfWork.CustomerRepository.GetById(customerId);
+            if (existingCustomer == null)
+                return NotFound();
+
+            await unitOfWork.CustomerRepository.Delete(existingCustomer);
+            await unitOfWork.Complete();
+            return NoContent();
         }
     }
 }

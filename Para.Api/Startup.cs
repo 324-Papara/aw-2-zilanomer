@@ -5,23 +5,23 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Para.Data.Context;
 using Para.Data.UnitOfWork;
-using Para.Data.Validators;
+using Para.Bussiness.Validators;
 
 namespace Para.Api;
 
 public class Startup
 {
     public IConfiguration Configuration;
-    
+
     public Startup(IConfiguration configuration)
     {
         this.Configuration = configuration;
     }
-    
-    
+
+
     public void ConfigureServices(IServiceCollection services)
     {
-               
+
         services.AddControllers().AddJsonOptions(options =>
         {
             options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
@@ -43,7 +43,8 @@ public class Startup
 
         //FluentValidation
         services.AddValidatorsFromAssemblyContaining<CustomerValidator>();
-        services.AddFluentValidation(x => x.RegisterValidatorsFromAssemblyContaining<CustomerValidator>()); // Buradaki sýnýf(CustomerValidator)ne ise bütün validate leri bulup sisteme entegre eder.
+        services.AddFluentValidation(x => x.RegisterValidatorsFromAssemblyContaining<CustomerValidator>());
+        // CustomerValidator sýnýfý bir referans olarak kullanýrýz, bu sekilde tum validatorleri otomatik olarak kaydetmis ve asp.net core a entegre etmis oluruz.
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
     }
